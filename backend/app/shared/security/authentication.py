@@ -27,12 +27,12 @@ def get_current_user(
 
     user_id = payload.get("sub")
 
-    if not user_id:
+    if not user_id or not str(user_id).isdigit():
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication token",
             headers={"WWW-Authenticate": "Bearer"},
-        )
+    )
 
     user = db.get(User, int(user_id))
 
