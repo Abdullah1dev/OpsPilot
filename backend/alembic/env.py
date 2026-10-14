@@ -8,6 +8,7 @@ from app.infrastructure.database.session import DATABASE_URL, engine
 
 # Register the Inventory model with SQLAlchemy metadata.
 from app.features.inventory import models as inventory_models  # noqa: F401
+from app.features.auth import models as auth_models  # noqa: F401
 
 from app.features.products import models as product_models
 
