@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     database_host: str = "localhost"
     database_port: int = 5432
     database_name: str = "opspilot"
+    
+    jwt_secret_key: str
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 30
 
     model_config = SettingsConfigDict(
         env_file=PROJECT_ROOT / ".env",
