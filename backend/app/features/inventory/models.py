@@ -1,9 +1,3 @@
-
-from sqlalchemy import (CheckConstraint,DateTime,ForeignKey,Integer,UniqueConstraint,func,)
-from sqlalchemy.orm import Mapped, mapped_column
-
-from app.infrastructure.database.base import Base
-
 from datetime import datetime
 
 from sqlalchemy import (
