@@ -1,4 +1,5 @@
 from pydantic import BaseModel, ConfigDict, Field
+from pydantic import model_validator
 
 from app.shared.enums.inventory_movement import InventoryMovementType
 from datetime import datetime
@@ -18,12 +19,25 @@ class InventoryResponse(BaseModel):
     
 
 
+
 class InventoryMovementCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     movement_type: InventoryMovementType
-    quantity: int = Field(gt=0)
+    quantity: int = Field(ge=0)
     notes: str | None = Field(default=None, max_length=500)
+
+    @model_validator(mode="after")
+    def validate_movement_quantity(self):
+        if (
+            self.movement_type != InventoryMovementType.ADJUSTMENT
+            and self.quantity <= 0
+        ):
+            raise ValueError(
+                "Receipt and issue quantities must be greater than zero."
+            )
+
+        return self
     
 
 
