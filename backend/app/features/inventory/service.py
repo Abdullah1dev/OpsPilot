@@ -47,3 +47,57 @@ def get_inventory_by_product_name(
 
 
 
+#Record Inventory movement
+def record_inventory_movement(
+    db: Session,
+    product_id: int,
+    movement: InventoryMovementCreate,
+    current_user: User,
+) -> InventoryMovementResponse:
+    check_permission(
+        current_user,
+        Permission.RECORD_INVENTORY_MOVEMENT,
+    )
+
+    statement = (
+        select(Inventory)
+        .where(Inventory.product_id == product_id)
+        .with_for_update()
+    )
+
+    inventory = db.execute(statement).scalar_one_or_none()
+
+    if inventory is None:
+        raise ValueError("Inventory record not found for this product.")
+
+    if movement.movement_type == InventoryMovementType.RECEIPT:
+        inventory.quantity_on_hand += movement.quantity
+
+    elif movement.movement_type == InventoryMovementType.ISSUE:
+        available_quantity = (
+            inventory.quantity_on_hand - inventory.quantity_reserved
+        )
+
+        if movement.quantity > available_quantity:
+            raise ValueError(
+                "Cannot issue more stock than the available quantity."
+            )
+
+        inventory.quantity_on_hand -= movement.quantity
+
+    elif movement.movement_type == InventoryMovementType.ADJUSTMENT:
+        inventory.quantity_on_hand = movement.quantity
+
+    inventory_movement = InventoryMovement(
+        inventory_id=inventory.id,
+        movement_type=movement.movement_type,
+        quantity=movement.quantity,
+        performed_by=current_user.id,
+        notes=movement.notes,
+    )
+
+    db.add(inventory_movement)
+    db.flush()
+
+    return InventoryMovementResponse.model_validate(inventory_movement)
+
