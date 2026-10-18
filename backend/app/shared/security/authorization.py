@@ -26,6 +26,24 @@ def require_roles(*allowed_roles: UserRole):
 
 
 
+#check permission
+
+def check_permission(current_user: User, permission: Permission) -> None:
+    """
+    Verify that an authenticated user has the required permission.
+    """
+
+    if not has_permission(current_user.role, permission):
+        raise PermissionError(
+            "You do not have permission to perform this action."
+        )
+
+
+
+
+
+
+
 def require_permission(permission: Permission):
     """
     Allow access only to authenticated users
