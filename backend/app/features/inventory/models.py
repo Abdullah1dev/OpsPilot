@@ -76,22 +76,23 @@ class Inventory(Base):
 
 
 
+
 class InventoryMovement(Base):
     __tablename__ = "inventory_movements"
 
-    __table_args__ =(
-        
-    CheckConstraint(
-        "quantity > 0",
-        name="ck_inventory_movements_quantity_positive",
-    ),
-    
-    
-    CheckConstraint(
-        "movement_type IN ('RECEIPT', 'ISSUE', 'ADJUSTMENT')",
-        name="ck_inventory_movements_type_valid",
-    ),
-    
+    __table_args__ = (
+        CheckConstraint(
+            """
+            (movement_type = 'ADJUSTMENT' AND quantity >= 0)
+            OR
+            (movement_type IN ('RECEIPT', 'ISSUE') AND quantity > 0)
+            """,
+            name="ck_inventory_movements_quantity_valid",
+        ),
+        CheckConstraint(
+            "movement_type IN ('RECEIPT', 'ISSUE', 'ADJUSTMENT')",
+            name="ck_inventory_movements_type_valid",
+        ),
     )
 
     id: Mapped[int] = mapped_column(
