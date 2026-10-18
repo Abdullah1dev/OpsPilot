@@ -1,6 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.features.auth.models import User
 from app.features.inventory.models import Inventory, InventoryMovement
 from app.features.inventory.schemas import (
     InventoryMovementCreate,
@@ -9,7 +10,6 @@ from app.features.inventory.schemas import (
 )
 from app.features.products.models import Product
 from app.shared.enums.inventory_movement import InventoryMovementType
-from app.features.auth.models import User
 from app.shared.security.authorization import check_permission
 from app.shared.security.permissions import Permission
 
@@ -46,8 +46,6 @@ def get_inventory_by_product_name(
     )
 
 
-
-#Record Inventory movement
 def record_inventory_movement(
     db: Session,
     product_id: int,
@@ -59,45 +57,62 @@ def record_inventory_movement(
         Permission.RECORD_INVENTORY_MOVEMENT,
     )
 
-    statement = (
-        select(Inventory)
-        .where(Inventory.product_id == product_id)
-        .with_for_update()
-    )
-
-    inventory = db.execute(statement).scalar_one_or_none()
-
-    if inventory is None:
-        raise ValueError("Inventory record not found for this product.")
-
-    if movement.movement_type == InventoryMovementType.RECEIPT:
-        inventory.quantity_on_hand += movement.quantity
-
-    elif movement.movement_type == InventoryMovementType.ISSUE:
-        available_quantity = (
-            inventory.quantity_on_hand - inventory.quantity_reserved
+    try:
+        statement = (
+            select(Inventory)
+            .where(Inventory.product_id == product_id)
+            .with_for_update()
         )
 
-        if movement.quantity > available_quantity:
+        inventory = db.execute(statement).scalar_one_or_none()
+
+        if inventory is None:
             raise ValueError(
-                "Cannot issue more stock than the available quantity."
+                "Inventory record not found for this product."
             )
 
-        inventory.quantity_on_hand -= movement.quantity
+        if movement.movement_type == InventoryMovementType.RECEIPT:
+            inventory.quantity_on_hand += movement.quantity
 
-    elif movement.movement_type == InventoryMovementType.ADJUSTMENT:
-        inventory.quantity_on_hand = movement.quantity
+        elif movement.movement_type == InventoryMovementType.ISSUE:
+            available_quantity = (
+                inventory.quantity_on_hand - inventory.quantity_reserved
+            )
 
-    inventory_movement = InventoryMovement(
-        inventory_id=inventory.id,
-        movement_type=movement.movement_type,
-        quantity=movement.quantity,
-        performed_by=current_user.id,
-        notes=movement.notes,
-    )
+            if movement.quantity > available_quantity:
+                raise ValueError(
+                    "Cannot issue more stock than the available quantity."
+                )
 
-    db.add(inventory_movement)
-    db.flush()
+            inventory.quantity_on_hand -= movement.quantity
 
-    return InventoryMovementResponse.model_validate(inventory_movement)
+        elif movement.movement_type == InventoryMovementType.ADJUSTMENT:
+            if movement.quantity < inventory.quantity_reserved:
+                raise ValueError(
+                    "Adjusted stock cannot be less than reserved stock."
+                )
 
+            inventory.quantity_on_hand = movement.quantity
+
+        inventory_movement = InventoryMovement(
+            inventory_id=inventory.id,
+            movement_type=movement.movement_type,
+            quantity=movement.quantity,
+            performed_by=current_user.id,
+            notes=movement.notes,
+        )
+
+        db.add(inventory_movement)
+        db.flush()
+
+        response = InventoryMovementResponse.model_validate(
+            inventory_movement
+        )
+
+        db.commit()
+
+        return response
+
+    except Exception:
+        db.rollback()
+        raise
