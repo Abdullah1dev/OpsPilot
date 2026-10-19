@@ -1,7 +1,6 @@
-
 from datetime import datetime
 
-from sqlalchemy import DateTime, Integer, String, func
+from sqlalchemy import DateTime, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.database.base import Base
@@ -11,14 +10,13 @@ class Product(Base):
     __tablename__ = "products"
 
     id: Mapped[int] = mapped_column(
-        Integer,
         primary_key=True,
+        index=True,
     )
 
     name: Mapped[str] = mapped_column(
         String(150),
         nullable=False,
-        unique=True,
         index=True,
     )
 
@@ -26,6 +24,18 @@ class Product(Base):
         String(100),
         nullable=False,
         unique=True,
+        index=True,
+    )
+
+    brand: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        index=True,
+    )
+
+    category: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
         index=True,
     )
 
