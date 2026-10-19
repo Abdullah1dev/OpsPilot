@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from app.core.config import settings
 from app.features.auth.router import router as auth_router
 from app.features.inventory.router import router as inventory_router
-
+from app.features.products.router import router as products_router
 
 app = FastAPI(
     title=settings.app_name,
@@ -14,7 +14,7 @@ app = FastAPI(
 
 app.include_router(auth_router)
 app.include_router(inventory_router)
-
+app.include_router(products_router)
 
 @app.get("/health")
 def health_check():
