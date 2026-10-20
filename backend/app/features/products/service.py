@@ -7,6 +7,7 @@ from app.features.products.models import Product
 from app.features.products.schemas import ProductCreate, ProductUpdate
 from app.shared.security.authorization import check_permission
 from app.shared.security.permissions import Permission
+from app.features.inventory.models import Inventory
 
 
 def create_product(
@@ -20,8 +21,14 @@ def create_product(
 
     try:
         db.add(product)
+        db.flush()
+
+        inventory = Inventory(product_id=product.id)
+        db.add(inventory)
+
         db.commit()
         db.refresh(product)
+
         return product
 
     except IntegrityError as exc:
@@ -36,6 +43,12 @@ def create_product(
             raise ValueError("A product with this SKU already exists.") from exc
 
         raise
+
+    except Exception:
+        db.rollback()
+        raise
+
+
 
 
 def get_products(
