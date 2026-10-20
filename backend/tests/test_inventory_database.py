@@ -22,6 +22,8 @@ def test_create_product_and_inventory(db):
         name="Test Laptop Repeatable",
         sku="TEST-LAPTOP-REPEATABLE-001",
         description="Test product for inventory",
+        brand="Test Brand",
+        category="Laptop",
     )
 
     db.add(product)
@@ -47,6 +49,8 @@ def test_reserved_quantity_cannot_exceed_stock(db):
     product = Product(
         name="Constraint Test Product Repeatable",
         sku="CONSTRAINT-TEST-REPEATABLE-001",
+        brand="Test Brand",
+        category="Laptop",
     )
 
     db.add(product)

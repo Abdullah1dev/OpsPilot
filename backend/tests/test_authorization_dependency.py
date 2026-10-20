@@ -2,17 +2,13 @@ from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 
 from app.features.auth.models import User
+from app.shared.enums.roles import UserRole
+from app.shared.security.authentication import get_current_user
 from app.shared.security.authorization import require_permission
 from app.shared.security.permissions import Permission
 
 
 app = FastAPI()
-
-
-
-
-
-client = TestClient(app)
 
 
 def create_test_user(role):
@@ -23,12 +19,21 @@ def create_test_user(role):
         role=role,
         is_active=True,
     )
-    
+
+
+@app.get("/test/products/create")
+def test_product_creation(
+    current_user: User = Depends(
+        require_permission(Permission.CREATE_PRODUCTS)
+    ),
+):
+    return {"message": "Product creation allowed"}
+
+
+client = TestClient(app)
+
 
 def test_manager_can_create_products():
-    from app.shared.enums.roles import UserRole
-    from app.shared.security.authentication import get_current_user
-
     app.dependency_overrides[get_current_user] = (
         lambda: create_test_user(UserRole.MANAGER)
     )
@@ -42,9 +47,6 @@ def test_manager_can_create_products():
 
 
 def test_sales_cannot_create_products():
-    from app.shared.enums.roles import UserRole
-    from app.shared.security.authentication import get_current_user
-
     app.dependency_overrides[get_current_user] = (
         lambda: create_test_user(UserRole.SALES)
     )

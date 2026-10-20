@@ -6,6 +6,7 @@ from app.shared.enums.roles import UserRole
 from app.shared.security.hashing import hash_password
 from app.shared.security.jwt import create_access_token
 from app.shared.security.authentication import get_current_user
+from fastapi.security import HTTPAuthorizationCredentials
 
 with SessionLocal() as db:
     test_user = User(
@@ -21,7 +22,18 @@ with SessionLocal() as db:
 
     try:
         token = create_access_token(str(test_user.id))
-        authenticated_user = get_current_user(token=token, db=db)
+        
+        credentials = HTTPAuthorizationCredentials(
+                scheme="Bearer",
+                credentials=token,
+        
+        )
+        authenticated_user = get_current_user(
+                credentials=credentials,
+                db=db,
+        
+        )
+        
 
         print("Authenticated user:", authenticated_user.email)
         print("User ID:", authenticated_user.id)
