@@ -30,7 +30,7 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_products_name'), 'products', ['name'], unique=True)
+    op.create_index(op.f('ix_products_name'), 'products', ['name'], unique=False)
     op.create_index(op.f('ix_products_sku'), 'products', ['sku'], unique=True)
     op.create_table('inventory',
     sa.Column('id', sa.Integer(), nullable=False),
