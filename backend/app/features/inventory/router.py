@@ -15,6 +15,8 @@ from app.infrastructure.database.session import get_db
 from app.shared.security.authorization import require_permission
 from app.shared.security.permissions import Permission
 
+from app.features.inventory.service import get_inventory_movements
+
 
 router = APIRouter(
     prefix="/inventory",
@@ -84,3 +86,23 @@ def create_inventory_movement(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=message,
         ) from exc
+
+
+
+@router.get(
+    "/{product_id}/movements",
+    response_model=list[InventoryMovementResponse],
+    summary="Get inventory movement history",
+)
+def get_product_inventory_movements(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_permission(Permission.VIEW_INVENTORY_MOVEMENTS)
+    ),
+) -> list[InventoryMovementResponse]:
+    return get_inventory_movements(
+        db=db,
+        product_id=product_id,
+        current_user=current_user,
+    )
