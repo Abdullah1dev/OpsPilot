@@ -116,3 +116,30 @@ def record_inventory_movement(
     except Exception:
         db.rollback()
         raise
+
+
+#get inventory movemnts
+
+def get_inventory_movements(
+    db: Session,
+    product_id: int,
+    current_user: User,
+) -> list[InventoryMovementResponse]:
+    check_permission(
+        current_user,
+        Permission.VIEW_INVENTORY_MOVEMENTS,
+    )
+
+    statement = (
+        select(InventoryMovement)
+        .join(
+            Inventory,
+            InventoryMovement.inventory_id == Inventory.id,
+        )
+        .where(Inventory.product_id == product_id)
+        .order_by(InventoryMovement.created_at.desc(), InventoryMovement.id.desc())
+    )
+
+    return list(
+        db.scalars(statement).all()
+    )
