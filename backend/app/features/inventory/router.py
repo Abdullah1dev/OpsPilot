@@ -23,7 +23,7 @@ router = APIRouter(
     tags=["Inventory"],
 )
 
-
+#get inventory by product name
 @router.get(
     "/by-name/{product_name}",
     response_model=InventoryResponse,
@@ -50,7 +50,7 @@ def get_inventory(
 
     return inventory
 
-
+#router for create inventory movements
 @router.post(
     "/{product_id}/movements",
     response_model=InventoryMovementResponse,
@@ -88,7 +88,7 @@ def create_inventory_movement(
         ) from exc
 
 
-
+#router for get inventory movements
 @router.get(
     "/{product_id}/movements",
     response_model=list[InventoryMovementResponse],
@@ -101,8 +101,17 @@ def get_product_inventory_movements(
         require_permission(Permission.VIEW_INVENTORY_MOVEMENTS)
     ),
 ) -> list[InventoryMovementResponse]:
-    return get_inventory_movements(
-        db=db,
-        product_id=product_id,
-        current_user=current_user,
-    )
+    try:
+        return get_inventory_movements(
+            db=db,
+            product_id=product_id,
+            current_user=current_user,
+        )
+    except ValueError as exc:
+        
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+            
+    
