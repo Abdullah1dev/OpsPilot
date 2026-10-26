@@ -14,25 +14,54 @@ from app.shared.security.authorization import check_permission
 from app.shared.security.permissions import Permission
 
 
-def get_inventory_by_product_name(
+
+#get inventory by product name and sku
+def get_inventory(
     db: Session,
-    product_name: str,
     current_user: User,
-) -> InventoryResponse | None:
+    product_name: str | None = None,
+    sku: str | None = None,
+) -> InventoryResponse:
     check_permission(current_user, Permission.VIEW_INVENTORY)
 
-    statement = (
-        select(Product, Inventory)
-        .join(Inventory, Inventory.product_id == Product.id)
-        .where(Product.name.ilike(product_name.strip()))
-    )
+    if bool(product_name) == bool(sku):
+        raise ValueError(
+            "Provide exactly one of product_name or sku."
+        )
 
-    result = db.execute(statement).first()
+    if sku:
+        statement = (
+            select(Product, Inventory)
+            .join(Inventory, Inventory.product_id == Product.id)
+            .where(Product.sku == sku.strip())
+        )
 
-    if result is None:
-        return None
+        result = db.execute(statement).first()
 
-    product, inventory = result
+        if result is None:
+            raise ValueError("Product not found.")
+
+        product, inventory = result
+
+    else:
+        statement = (
+            select(Product, Inventory)
+            .join(Inventory, Inventory.product_id == Product.id)
+            .where(Product.name.ilike(product_name.strip()))
+        )
+
+        results = db.execute(statement).all()
+
+        if not results:
+            raise ValueError("Product not found.")
+
+        if len(results) > 1:
+            raise ValueError(
+                "Multiple products found with this name. "
+                "Please provide the product SKU."
+            )
+
+        product, inventory = results[0]
 
     return InventoryResponse(
         product_id=product.id,
@@ -46,6 +75,7 @@ def get_inventory_by_product_name(
     )
 
 
+#record inventory movement
 def record_inventory_movement(
     db: Session,
     product_id: int,
