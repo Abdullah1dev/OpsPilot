@@ -8,7 +8,8 @@ from app.features.inventory.schemas import (
     InventoryResponse,
 )
 from app.features.inventory.service import (
-    get_inventory_by_product_name,
+    get_inventory,
+    get_inventory_movements,
     record_inventory_movement,
 )
 from app.infrastructure.database.session import get_db
@@ -29,26 +30,37 @@ router = APIRouter(
     response_model=InventoryResponse,
     summary="Get inventory by product name",
 )
-def get_inventory(
+def get_inventory_by_name(
     product_name: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_permission(Permission.VIEW_INVENTORY)
     ),
 ) -> InventoryResponse:
-    inventory = get_inventory_by_product_name(
-        db=db,
-        product_name=product_name,
-        current_user=current_user,
-    )
-
-    if inventory is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Product inventory not found.",
+    try:
+        return get_inventory(
+            db=db,
+            product_name=product_name,
+            current_user=current_user,
         )
 
-    return inventory
+    except ValueError as exc:
+        message = str(exc)
+
+        if message == "Product not found.":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=message,
+            ) from exc
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=message,
+        ) from exc
+
+
+
+
 
 #router for create inventory movements
 @router.post(
