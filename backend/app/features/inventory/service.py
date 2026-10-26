@@ -24,44 +24,46 @@ def get_inventory(
 ) -> InventoryResponse:
     check_permission(current_user, Permission.VIEW_INVENTORY)
 
-    if bool(product_name) == bool(sku):
+    product_name = product_name.strip() if product_name else None
+    sku = sku.strip() if sku else None
+
+    if not product_name and not sku:
         raise ValueError(
-            "Provide exactly one of product_name or sku."
+            "Provide at least one of product_name or sku."
+        )
+
+    if product_name == "" or sku == "":
+        raise ValueError(
+            "Product name and SKU cannot be empty."
+        )
+
+    statement = (
+        select(Product, Inventory)
+        .join(Inventory, Inventory.product_id == Product.id)
+    )
+
+    if product_name:
+        statement = statement.where(
+            Product.name.ilike(product_name)
         )
 
     if sku:
-        statement = (
-            select(Product, Inventory)
-            .join(Inventory, Inventory.product_id == Product.id)
-            .where(Product.sku == sku.strip())
+        statement = statement.where(Product.sku == sku)
+
+    results = db.execute(statement).all()
+
+    if not results:
+        raise ValueError(
+            "No product matches the provided identifier(s)."
         )
 
-        result = db.execute(statement).first()
-
-        if result is None:
-            raise ValueError("Product not found.")
-
-        product, inventory = result
-
-    else:
-        statement = (
-            select(Product, Inventory)
-            .join(Inventory, Inventory.product_id == Product.id)
-            .where(Product.name.ilike(product_name.strip()))
+    if len(results) > 1:
+        raise ValueError(
+            "Multiple products match this name. "
+            "Please provide a SKU to identify the product."
         )
 
-        results = db.execute(statement).all()
-
-        if not results:
-            raise ValueError("Product not found.")
-
-        if len(results) > 1:
-            raise ValueError(
-                "Multiple products found with this name. "
-                "Please provide the product SKU."
-            )
-
-        product, inventory = results[0]
+    product, inventory = results[0]
 
     return InventoryResponse(
         product_id=product.id,
@@ -73,6 +75,8 @@ def get_inventory(
             inventory.quantity_on_hand - inventory.quantity_reserved
         ),
     )
+
+
 
 
 #record inventory movement
