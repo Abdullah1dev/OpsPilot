@@ -26,12 +26,13 @@ router = APIRouter(
 
 #get inventory by product name
 @router.get(
-    "/by-name/{product_name}",
+    "",
     response_model=InventoryResponse,
-    summary="Get inventory by product name",
+    summary="Get inventory by product name or SKU",
 )
-def get_inventory_by_name(
-    product_name: str,
+def get_inventory_endpoint(
+    product_name: str | None = None,
+    sku: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_permission(Permission.VIEW_INVENTORY)
@@ -40,14 +41,15 @@ def get_inventory_by_name(
     try:
         return get_inventory(
             db=db,
-            product_name=product_name,
             current_user=current_user,
+            product_name=product_name,
+            sku=sku,
         )
 
     except ValueError as exc:
         message = str(exc)
 
-        if message == "Product not found.":
+        if message == "No product matches the provided identifier(s).":
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=message,
