@@ -50,7 +50,7 @@ def create_product(
 
 
 
-
+#get products
 def get_products(
     db: Session,
     current_user: User,
@@ -60,7 +60,7 @@ def get_products(
     statement = select(Product).order_by(Product.id)
     return list(db.scalars(statement).all())
 
-
+#get product by id
 def get_product_by_id(
     db: Session,
     product_id: int,
@@ -70,7 +70,7 @@ def get_product_by_id(
 
     return db.get(Product, product_id)
 
-
+#update product
 def update_product(
     db: Session,
     product_id: int,
@@ -109,3 +109,17 @@ def update_product(
                 ) from exc
 
         raise
+
+
+
+#get product by sku
+def get_product_by_sku(
+    db: Session,
+    sku: str,
+    current_user: User,
+) -> Product | None:
+    check_permission(current_user, Permission.VIEW_PRODUCTS)
+
+    statement = select(Product).where(Product.sku == sku.strip())
+
+    return db.scalar(statement)
