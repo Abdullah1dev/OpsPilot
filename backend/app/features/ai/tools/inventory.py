@@ -1,60 +1,28 @@
 from app.features.ai.context import AIToolContext
-from app.features.ai.schemas import ToolError, ToolErrorType, ToolResult
-from app.features.inventory.service import get_inventory
+from app.features.ai.adapters.inventory import get_inventory_tool
+from langchain_core.tools import tool
 
 
-def get_inventory_tool(
-    context: AIToolContext,
-    product_name: str | None = None,
-    sku: str | None = None,
-) -> ToolResult:
-    try:
-        inventory = get_inventory(
-            db=context.db,
-            current_user=context.current_user,
+
+
+def create_inventory_langchain_tool(context: AIToolContext):
+    @tool
+    def get_inventory(
+        product_name: str | None = None,
+        sku: str | None = None,
+    ) -> dict:
+        """Retrieve current stock for a product by its name, SKU, or both.
+        Use this for questions about quantity on hand, reserved stock,
+        and available stock. If the product name is ambiguous, provide
+        its SKU when available. Do not use this tool for movement history
+        or general product catalog searches.
+        """
+        result = get_inventory_tool(
+            context=context,
             product_name=product_name,
             sku=sku,
         )
 
-        return ToolResult(
-            success=True,
-            data=inventory.model_dump(),
-        )
+        return result.model_dump()
 
-    except PermissionError:
-        return ToolResult(
-            success=False,
-            error=ToolError(
-                type=ToolErrorType.PERMISSION_DENIED,
-                message="You do not have permission to view inventory.",
-            ),
-        )
-
-    except ValueError as exc:
-        message = str(exc)
-
-        if message == "No product matches the provided identifier(s).":
-            error_type = ToolErrorType.PRODUCT_NOT_FOUND
-
-        elif message.startswith("Multiple products match"):
-            error_type = ToolErrorType.AMBIGUOUS_PRODUCT
-
-        else:
-            error_type = ToolErrorType.VALIDATION_ERROR
-
-        return ToolResult(
-            success=False,
-            error=ToolError(
-                type=error_type,
-                message=message,
-            ),
-        )
-
-    except Exception:
-        return ToolResult(
-            success=False,
-            error=ToolError(
-                type=ToolErrorType.TOOL_ERROR,
-                message="An unexpected error occurred while retrieving inventory.",
-            ),
-        )
+    return get_inventory
