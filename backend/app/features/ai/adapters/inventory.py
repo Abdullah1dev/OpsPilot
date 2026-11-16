@@ -1,3 +1,5 @@
+#Calls service and standardizes results/errors
+
 from app.features.ai.context import AIToolContext
 from app.features.ai.schemas import ToolError, ToolErrorType, ToolResult
 from app.features.inventory.service import get_inventory
