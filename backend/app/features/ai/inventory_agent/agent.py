@@ -1,7 +1,8 @@
 from langchain_core.messages import SystemMessage
-from langchain_core.runnables import Runnable
+from langchain_core.tools import BaseTool
 
 from app.features.ai.context import AIToolContext
+from app.features.ai.inventory_agent.state import InventoryAgentState
 from app.features.ai.llm.client import get_llm
 from app.features.ai.tools.inventory import create_inventory_langchain_tool
 
@@ -25,24 +26,24 @@ Rules:
 7. Always use the tool to obtain the actual inventory data.
 8. Do not query the database directly.
 9. Do not handle product catalog or movement-history questions.
-
-Examples:
-
-User: "How many Samsung units do we have?"
-Tool call: get_inventory(product_name="Samsung")
-
-User: "What is the stock for SKU ABC123?"
-Tool call: get_inventory(sku="ABC123")
-
-User: "How many Samsung units with SKU ABC123?"
-Tool call: get_inventory(product_name="Samsung", sku="ABC123")
 """
 
 
 def create_inventory_agent(context: AIToolContext):
     llm = get_llm()
+
     inventory_tool = create_inventory_langchain_tool(context)
 
     llm_with_tools = llm.bind_tools([inventory_tool])
 
-    return llm_with_tools
+    def agent_node(state: InventoryAgentState):
+        messages = [
+            SystemMessage(content=INVENTORY_AGENT_PROMPT),
+            *state["messages"],
+        ]
+
+        response = llm_with_tools.invoke(messages)
+
+        return {"messages": [response]}
+
+    return agent_node
