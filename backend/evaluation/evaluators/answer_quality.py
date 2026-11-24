@@ -15,50 +15,58 @@ class AnswerQualityResult(BaseModel):
 
 def evaluate_answer_quality(
     query: str,
-    tool_result: dict,
+    tool_result: dict | None,
     final_response: str,
     answer_requirements: list[str],
+    expected_outcome: str = "success",
 ) -> AnswerQualityResult:
 
     llm = get_llm()
-
     judge = llm.with_structured_output(AnswerQualityResult)
 
     system_prompt = """
-    You are an evaluator assessing the final answer of an AI
-    inventory assistant.
+    You are an evaluator assessing the final answer of an AI inventory assistant.
 
-    Evaluate the answer using ONLY the provided user query,
-    tool result, and answer requirements.
+    Evaluate the answer using ONLY the provided user query, tool result,
+    expected outcome, and answer requirements.
 
-    Evaluation rules:
+    General rules:
 
     1. Check whether the answer addresses the user's question.
-    2. Verify that all reported facts agree with the tool result.
-    3. Check whether the answer satisfies the answer requirements.
-    4. Penalize invented quantities, product details, or claims.
-    5. If the tool returned an error, check that the answer
-       communicates the error accurately.
-    6. Do not require exact wording. Different wording is acceptable
-       if the meaning and facts are correct.
+    2. Never accept invented quantities, product details, or claims.
+    3. Do not require exact wording.
+    4. Be strict about factual correctness.
+
+    When expected outcome is success:
+    - Verify reported facts against the tool result.
+    - Check that the answer satisfies the answer requirements.
+
+    When expected outcome is error:
+    - Check that the answer communicates the tool error accurately.
+    - Ensure it does not invent quantities or pretend the operation succeeded.
+
+    When expected outcome is not_applicable:
+    - Check that the agent recognizes the question is outside its responsibility.
+    - Check that it does not pretend to have retrieved the requested information.
+    - Check that it does not invent information or use an unrelated tool result.
 
     Scoring:
     5 = Fully correct, complete, and clear.
-    4 = Correct with minor omissions or presentation issues.
-    3 = Partially correct, with meaningful omissions.
+    4 = Correct with minor omissions.
+    3 = Partially correct.
     2 = Major factual or relevance problems.
     1 = Incorrect, misleading, or fabricated.
 
     Set passed to true only when the answer is factually correct
     and satisfies the important answer requirements.
-
-    Be strict about factual correctness. Never assume information
-    that is not present in the tool result.
     """
 
     human_prompt = f"""
     USER QUERY:
     {query}
+
+    EXPECTED OUTCOME:
+    {expected_outcome}
 
     ACTUAL TOOL RESULT:
     {tool_result}
@@ -72,9 +80,7 @@ def evaluate_answer_quality(
     Evaluate the final agent response.
     """
 
-    result = judge.invoke([
+    return judge.invoke([
         SystemMessage(content=system_prompt),
         HumanMessage(content=human_prompt),
     ])
-
-    return result
