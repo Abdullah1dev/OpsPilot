@@ -1,33 +1,53 @@
+
 {
-  "dataset": "inventory_agent",
+  "dataset_name": "inventory_agent",
   "version": "1.0",
   "cases": [
     {
       "id": "INV-001",
-      "category": "happy_path",
+      "category": "basic_inventory",
       "query": "How many Samsung units do we have?",
       "expected_tool": "get_inventory",
       "expected_arguments": {
         "product_name": "Samsung"
       },
       "expected_outcome": "success",
-      "fixture": "existing_samsung",
-      "required_facts": [
-        "quantity_on_hand"
+      "expected_error_type": null,
+      "answer_requirements": [
+        "Report the quantity on hand",
+        "Report the reserved quantity",
+        "Report the available quantity",
+        "Use values returned by the tool"
       ]
     },
     {
       "id": "INV-002",
       "category": "sku_lookup",
-      "query": "Check the stock for SKU Admin-create1122.",
+      "query": "Check the stock for SKU Admin-create1122",
       "expected_tool": "get_inventory",
       "expected_arguments": {
         "sku": "Admin-create1122"
       },
       "expected_outcome": "success",
-      "fixture": "existing_samsung",
-      "required_facts": [
-        "quantity_on_hand"
+      "expected_error_type": null,
+      "answer_requirements": [
+        "Identify the correct product",
+        "Report the stock quantities returned by the tool"
+      ]
+    },
+    {
+      "id": "INV-003",
+      "category": "product_not_found",
+      "query": "How many units of NonexistentProduct123 do we have?",
+      "expected_tool": "get_inventory",
+      "expected_arguments": {
+        "product_name": "NonexistentProduct123"
+      },
+      "expected_outcome": "error",
+      "expected_error_type": "PRODUCT_NOT_FOUND",
+      "answer_requirements": [
+        "Clearly explain that the product was not found",
+        "Do not invent stock quantities"
       ]
     }
   ]
