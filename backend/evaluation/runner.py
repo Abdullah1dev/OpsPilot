@@ -1,3 +1,4 @@
+
 import json
 from pathlib import Path
 
@@ -9,6 +10,7 @@ from app.features.ai.context import AIToolContext
 from app.features.ai.inventory_agent.graph import create_inventory_graph
 
 from evaluation.evaluators.deterministic import evaluate_inventory_case
+from evaluation.evaluators.answer_quality import evaluate_answer_quality
 
 
 DATASET_PATH = (
@@ -19,6 +21,7 @@ DATASET_PATH = (
 
 
 def load_dataset() -> list[dict]:
+    """Load inventory evaluation cases from JSON."""
     with open(DATASET_PATH, "r", encoding="utf-8") as file:
         dataset = json.load(file)
 
@@ -26,6 +29,8 @@ def load_dataset() -> list[dict]:
 
 
 def run_evaluation() -> list[dict]:
+    """Run deterministic and answer-quality evaluation."""
+
     cases = load_dataset()
     evaluation_results = []
 
@@ -51,6 +56,7 @@ def run_evaluation() -> list[dict]:
             print(f"\nRunning {case['id']}: {case['query']}")
 
             try:
+                # Execute the Inventory Agent
                 result = graph.invoke(
                     {
                         "messages": [
@@ -59,16 +65,65 @@ def run_evaluation() -> list[dict]:
                     }
                 )
 
-                evaluation = evaluate_inventory_case(
+                # 1. Deterministic evaluation
+                deterministic_result = evaluate_inventory_case(
                     case=case,
                     messages=result["messages"],
                 )
 
+                # 2. Answer-quality evaluation
+                answer_quality_result = None
+
+                tool_result = deterministic_result.get("tool_result")
+                final_response = deterministic_result.get("final_response")
+
+                if tool_result is not None and final_response is not None:
+                    answer_quality_result = evaluate_answer_quality(
+                        query=case["query"],
+                        tool_result=tool_result,
+                        final_response=final_response,
+                        answer_requirements=case["answer_requirements"],
+                    )
+
+                # Combine both evaluation results
+                evaluation = {
+                    "case_id": case["id"],
+                    "deterministic": deterministic_result,
+                    "answer_quality": (
+                        answer_quality_result.model_dump()
+                        if answer_quality_result is not None
+                        else None
+                    ),
+                }
+
+                evaluation["passed"] = (
+                    deterministic_result["passed"]
+                    and answer_quality_result is not None
+                    and answer_quality_result.passed
+                )
+
                 evaluation_results.append(evaluation)
 
+                # Display results
                 status = "PASS" if evaluation["passed"] else "FAIL"
+
                 print(f"Result: {status}")
-                print(f"Checks: {evaluation['checks']}")
+                print(
+                    f"Deterministic: "
+                    f"{deterministic_result['passed']}"
+                )
+
+                if answer_quality_result is not None:
+                    print(
+                        f"Answer quality score: "
+                        f"{answer_quality_result.score}/5"
+                    )
+                    print(
+                        f"Answer quality passed: "
+                        f"{answer_quality_result.passed}"
+                    )
+                else:
+                    print("Answer quality: Not evaluated")
 
             except Exception as exc:
                 evaluation_results.append({
