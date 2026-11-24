@@ -26,6 +26,27 @@ def parse_tool_result(content: Any) -> dict | None:
     return None
 
 
+
+
+def extract_final_response(messages: list) -> str | None:
+    """Get the final AI response after tool execution."""
+
+    for message in reversed(messages):
+        if (
+            getattr(message, "type", None) == "ai"
+            and not getattr(message, "tool_calls", [])
+        ):
+            content = message.content
+
+            if isinstance(content, str):
+                return content
+
+            return str(content)
+
+    return None
+
+
+
 def evaluate_inventory_case(case: dict, messages: list) -> dict:
     """
     Evaluate tool selection, arguments, and execution outcome
@@ -133,8 +154,12 @@ def evaluate_inventory_case(case: dict, messages: list) -> dict:
     }
 
     return {
-        "case_id": case["id"],
-        "passed": all(checks.values()),
-        "checks": checks,
-        "details": details
+        
+    "case_id": case["id"],
+    "passed": all(checks.values()),
+    "checks": checks,
+    "details": details,
+    "tool_result": tool_result,
+    "final_response": extract_final_response(messages)
+    
     }
