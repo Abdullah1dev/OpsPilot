@@ -44,7 +44,7 @@
         "product_name": "NonexistentProduct123"
       },
       "expected_outcome": "error",
-      "expected_error_type": "PRODUCT_NOT_FOUND",
+      "expected_error_type": "product_not_found",
       "answer_requirements": [
         "Clearly explain that the product was not found",
         "Do not invent stock quantities"
