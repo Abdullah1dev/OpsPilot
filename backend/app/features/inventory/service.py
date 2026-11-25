@@ -14,25 +14,56 @@ from app.shared.security.authorization import check_permission
 from app.shared.security.permissions import Permission
 
 
-def get_inventory_by_product_name(
+
+#get inventory by product name and sku
+def get_inventory(
     db: Session,
-    product_name: str,
     current_user: User,
-) -> InventoryResponse | None:
+    product_name: str | None = None,
+    sku: str | None = None,
+) -> InventoryResponse:
     check_permission(current_user, Permission.VIEW_INVENTORY)
+
+    product_name = product_name.strip() if product_name else None
+    sku = sku.strip() if sku else None
+
+    if not product_name and not sku:
+        raise ValueError(
+            "Provide at least one of product_name or sku."
+        )
+
+    if product_name == "" or sku == "":
+        raise ValueError(
+            "Product name and SKU cannot be empty."
+        )
 
     statement = (
         select(Product, Inventory)
         .join(Inventory, Inventory.product_id == Product.id)
-        .where(Product.name.ilike(product_name.strip()))
     )
 
-    result = db.execute(statement).first()
+    if product_name:
+        statement = statement.where(
+            Product.name.ilike(product_name)
+        )
 
-    if result is None:
-        return None
+    if sku:
+        statement = statement.where(Product.sku == sku)
 
-    product, inventory = result
+    results = db.execute(statement).all()
+
+    if not results:
+        raise ValueError(
+            "No product matches the provided identifier(s)."
+        )
+
+    if len(results) > 1:
+        raise ValueError(
+            "Multiple products match this name. "
+            "Please provide a SKU to identify the product."
+        )
+
+    product, inventory = results[0]
 
     return InventoryResponse(
         product_id=product.id,
@@ -46,6 +77,9 @@ def get_inventory_by_product_name(
     )
 
 
+
+
+#record inventory movement
 def record_inventory_movement(
     db: Session,
     product_id: int,

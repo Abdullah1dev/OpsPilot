@@ -1,0 +1,90 @@
+
+{
+  "dataset_name": "inventory_agent",
+  "version": "2.0",
+  "cases": [
+    {
+      "id": "INV-001",
+      "category": "basic_inventory",
+      "query": "How many Samsung units do we currently have?",
+      "expected_tool": "get_inventory",
+      "expected_arguments": {
+        "product_name": "Samsung"
+      },
+      "expected_outcome": "success",
+      "expected_error_type": null,
+      "answer_requirements": [
+        "Identify the correct product",
+        "Report quantity on hand",
+        "Report reserved quantity",
+        "Report available quantity",
+        "Use values returned by the tool"
+      ]
+    },
+    {
+      "id": "INV-002",
+      "category": "sku_lookup",
+      "query": "Check the current stock for SKU Admin-create1122",
+      "expected_tool": "get_inventory",
+      "expected_arguments": {
+        "sku": "Admin-create1122"
+      },
+      "expected_outcome": "success",
+      "expected_error_type": null,
+      "answer_requirements": [
+        "Identify the correct product",
+        "Report the stock quantities returned by the tool"
+      ]
+    },
+    {
+    "id": "INV-003",
+    "category": "ambiguous_product",
+    "query": "How much stock do we have for Test Laptop?",
+    "expected_tool": "get_inventory",
+    "expected_arguments": {
+        "product_name": "Test Laptop"
+    },
+    "expected_outcome": "error",
+    "expected_error_type": "ambiguous_product",
+    "answer_requirements": [
+        "Explain that multiple products match the name",
+        "Ask the user to provide a SKU",
+        "Do not guess which product was intended",
+        "Do not invent stock quantities"
+    ]
+    },
+
+    {
+      "id": "INV-004",
+      "category": "reserved_and_available_stock",
+      "query": "For Samsung, show me the quantity on hand, reserved quantity, and available quantity.",
+      "expected_tool": "get_inventory",
+      "expected_arguments": {
+        "product_name": "Samsung"
+      },
+      "expected_outcome": "success",
+      "expected_error_type": null,
+      "answer_requirements": [
+        "Report quantity on hand",
+        "Report reserved quantity",
+        "Report available quantity",
+        "Ensure available quantity matches on-hand minus reserved",
+        "Use values returned by the tool"
+      ]
+    },
+    {
+      "id": "INV-005",
+      "category": "out_of_scope",
+      "query": "Show me the inventory movement history for Samsung.",
+      "expected_tool": null,
+      "expected_arguments": {},
+      "expected_outcome": "not_applicable",
+      "expected_error_type": null,
+      "answer_requirements": [
+        "Explain that movement history is outside the Inventory Agent's responsibility",
+        "Do not call get_inventory as a substitute for movement history",
+        "Do not invent movement records"
+      ]
+    }
+  ]
+}
