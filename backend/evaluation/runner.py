@@ -77,13 +77,21 @@ def run_evaluation() -> list[dict]:
                 tool_result = deterministic_result.get("tool_result")
                 final_response = deterministic_result.get("final_response")
 
-                if tool_result is not None and final_response is not None:
+                answer_quality_result = None
+
+                tool_result = deterministic_result.get("tool_result")
+                final_response = deterministic_result.get("final_response")
+
+                if final_response:
                     answer_quality_result = evaluate_answer_quality(
                         query=case["query"],
                         tool_result=tool_result,
                         final_response=final_response,
                         answer_requirements=case["answer_requirements"],
+                        expected_outcome=case["expected_outcome"],
                     )
+                    
+                    
 
                 # Combine both evaluation results
                 evaluation = {
