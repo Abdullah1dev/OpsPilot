@@ -1,5 +1,6 @@
 
 import json
+import sys
 from pathlib import Path
 
 from langchain_core.messages import HumanMessage
@@ -7,31 +8,49 @@ from langchain_core.messages import HumanMessage
 from app.infrastructure.database.session import SessionLocal
 from app.features.auth.models import User
 from app.features.ai.context import AIToolContext
-from app.features.ai.inventory_agent.graph import create_inventory_graph
 
-from evaluation.evaluators.deterministic import evaluate_inventory_case
+from app.features.ai.inventory_agent.graph import create_inventory_graph
+from app.features.ai.product_agent.graph import create_product_graph
+
+from evaluation.evaluators.deterministic import evaluate_agent_case
 from evaluation.evaluators.answer_quality import evaluate_answer_quality
 
 
-DATASET_PATH = (
-    Path(__file__).resolve().parent
-    / "datasets"
-    / "inventory.json"
-)
+DATASET_DIR = Path(__file__).resolve().parent / "datasets"
+
+AGENTS = {
+    "inventory": {
+        "dataset": DATASET_DIR / "inventory.json",
+        "graph_factory": create_inventory_graph,
+    },
+    "product": {
+        "dataset": DATASET_DIR / "product.json",
+        "graph_factory": create_product_graph,
+    },
+}
 
 
-def load_dataset() -> list[dict]:
-    """Load inventory evaluation cases from JSON."""
-    with open(DATASET_PATH, "r", encoding="utf-8") as file:
+def load_dataset(agent_name: str) -> list[dict]:
+    """Load evaluation cases for the selected agent."""
+
+    dataset_path = AGENTS[agent_name]["dataset"]
+
+    with open(dataset_path, "r", encoding="utf-8") as file:
         dataset = json.load(file)
 
     return dataset["cases"]
 
 
-def run_evaluation() -> list[dict]:
+def run_evaluation(agent_name: str) -> list[dict]:
     """Run deterministic and answer-quality evaluation."""
 
-    cases = load_dataset()
+    if agent_name not in AGENTS:
+        raise ValueError(
+            f"Unsupported agent: {agent_name}. "
+            f"Choose from: {', '.join(AGENTS)}"
+        )
+
+    cases = load_dataset(agent_name)
     evaluation_results = []
 
     db = SessionLocal()
@@ -50,37 +69,34 @@ def run_evaluation() -> list[dict]:
             current_user=user,
         )
 
-        graph = create_inventory_graph(context)
+        graph = AGENTS[agent_name]["graph_factory"](context)
 
         for case in cases:
             print(f"\nRunning {case['id']}: {case['query']}")
 
             try:
-                # Execute the Inventory Agent
-                result = graph.invoke(
-                    {
-                        "messages": [
-                            HumanMessage(content=case["query"])
-                        ]
-                    }
-                )
+                result = graph.invoke({
+                    "messages": [
+                        HumanMessage(content=case["query"])
+                    ]
+                })
 
                 # 1. Deterministic evaluation
-                deterministic_result = evaluate_inventory_case(
+                deterministic_result = evaluate_agent_case(
                     case=case,
                     messages=result["messages"],
                 )
 
                 # 2. Answer-quality evaluation
+                final_response = deterministic_result.get(
+                    "final_response"
+                )
+
+                tool_result = deterministic_result.get(
+                    "tool_result"
+                )
+
                 answer_quality_result = None
-
-                tool_result = deterministic_result.get("tool_result")
-                final_response = deterministic_result.get("final_response")
-
-                answer_quality_result = None
-
-                tool_result = deterministic_result.get("tool_result")
-                final_response = deterministic_result.get("final_response")
 
                 if final_response:
                     answer_quality_result = evaluate_answer_quality(
@@ -90,10 +106,8 @@ def run_evaluation() -> list[dict]:
                         answer_requirements=case["answer_requirements"],
                         expected_outcome=case["expected_outcome"],
                     )
-                    
-                    
 
-                # Combine both evaluation results
+                # 3. Combine results
                 evaluation = {
                     "case_id": case["id"],
                     "deterministic": deterministic_result,
@@ -112,13 +126,12 @@ def run_evaluation() -> list[dict]:
 
                 evaluation_results.append(evaluation)
 
-                # Display results
+                # 4. Display results
                 status = "PASS" if evaluation["passed"] else "FAIL"
 
                 print(f"Result: {status}")
                 print(
-                    f"Deterministic: "
-                    f"{deterministic_result['passed']}"
+                    f"Deterministic: {deterministic_result['passed']}"
                 )
 
                 if answer_quality_result is not None:
@@ -149,13 +162,20 @@ def run_evaluation() -> list[dict]:
 
 
 if __name__ == "__main__":
-    results = run_evaluation()
+    agent_name = (
+        sys.argv[1].lower()
+        if len(sys.argv) > 1
+        else "inventory"
+    )
+
+    results = run_evaluation(agent_name)
 
     total = len(results)
     passed = sum(result["passed"] for result in results)
     failed = total - passed
 
     print("\n========== EVALUATION SUMMARY ==========")
+    print(f"Agent: {agent_name}")
     print(f"Total cases: {total}")
     print(f"Passed: {passed}")
     print(f"Failed: {failed}")
