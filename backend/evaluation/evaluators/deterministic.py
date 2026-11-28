@@ -1,3 +1,4 @@
+
 import json
 from typing import Any
 
@@ -44,10 +45,10 @@ def extract_final_response(messages: list) -> str | None:
     return None
 
 
-def evaluate_inventory_case(case: dict, messages: list) -> dict:
+def evaluate_agent_case(case: dict, messages: list) -> dict:
     """
     Evaluate tool selection, arguments, and execution outcome
-    for one Inventory Agent test case.
+    for an AI agent test case.
     """
 
     expected_outcome = case["expected_outcome"]
@@ -64,7 +65,6 @@ def evaluate_inventory_case(case: dict, messages: list) -> dict:
 
     final_response = extract_final_response(messages)
 
-    # Case 1: No tool should be called.
     if expected_outcome == "not_applicable":
         no_tool_called = len(tool_calls) == 0
         response_exists = bool(final_response and final_response.strip())
@@ -88,7 +88,6 @@ def evaluate_inventory_case(case: dict, messages: list) -> dict:
             "final_response": final_response,
         }
 
-    # Case 2: A specific tool is expected.
     expected_tool = case["expected_tool"]
     expected_arguments = normalize_arguments(
         case["expected_arguments"]
@@ -188,3 +187,8 @@ def evaluate_inventory_case(case: dict, messages: list) -> dict:
         "tool_result": tool_result,
         "final_response": final_response,
     }
+
+
+# Backward compatibility for existing Inventory evaluation imports.
+def evaluate_inventory_case(case: dict, messages: list) -> dict:
+    return evaluate_agent_case(case, messages)

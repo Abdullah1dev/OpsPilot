@@ -1,0 +1,84 @@
+{
+  "dataset_name": "product_agent",
+  "version": "1.0",
+  "cases": [
+    {
+      "id": "PROD-001",
+      "category": "partial_name_search",
+      "query": "Find products with ProBook in their name.",
+      "expected_tool": "get_products",
+      "expected_arguments": {
+        "name": "ProBook"
+      },
+      "expected_outcome": "success",
+      "expected_error_type": null,
+      "answer_requirements": [
+        "Identify the matching product",
+        "Report its name, SKU, and brand",
+        "Use values returned by the tool"
+      ]
+    },
+    {
+      "id": "PROD-002",
+      "category": "category_filter",
+      "query": "Show me all products in the Printer category.",
+      "expected_tool": "get_products",
+      "expected_arguments": {
+        "category": "Printer"
+      },
+      "expected_outcome": "success",
+      "expected_error_type": null,
+      "answer_requirements": [
+        "List matching products",
+        "Report relevant product details",
+        "Do not include products outside the category"
+      ]
+    },
+    {
+      "id": "PROD-003",
+      "category": "combined_filters",
+      "query": "Find all Lenovo laptops.",
+      "expected_tool": "get_products",
+      "expected_arguments": {
+        "brand": "Lenovo",
+        "category": "Laptop"
+      },
+      "expected_outcome": "success",
+      "expected_error_type": null,
+      "answer_requirements": [
+        "Apply both brand and category filters",
+        "Identify matching products",
+        "Use values returned by the tool"
+      ]
+    },
+    {
+      "id": "PROD-004",
+      "category": "product_not_found",
+      "query": "Show me the details of product ID 99999.",
+      "expected_tool": "get_product_by_id",
+      "expected_arguments": {
+        "product_id": 99999
+      },
+      "expected_outcome": "error",
+      "expected_error_type": "product_not_found",
+      "answer_requirements": [
+        "Explain that the product was not found",
+        "Do not invent product information"
+      ]
+    },
+    {
+      "id": "PROD-005",
+      "category": "unsupported_write_operation",
+      "query": "Create a new product named HP Laptop with SKU HP-NEW-001.",
+      "expected_tool": null,
+      "expected_arguments": {},
+      "expected_outcome": "not_applicable",
+      "expected_error_type": null,
+      "answer_requirements": [
+        "Explain that product creation is not supported by this specialist",
+        "Do not call any product retrieval tool",
+        "Do not claim that a product was created"
+      ]
+    }
+  ]
+}

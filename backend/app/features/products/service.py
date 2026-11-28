@@ -51,14 +51,37 @@ def create_product(
 
 
 #get products
+
 def get_products(
     db: Session,
     current_user: User,
+    name: str | None = None,
+    brand: str | None = None,
+    category: str | None = None,
 ) -> list[Product]:
     check_permission(current_user, Permission.VIEW_PRODUCTS)
 
-    statement = select(Product).order_by(Product.id)
+    statement = select(Product)
+
+    if name:
+        statement = statement.where(
+            Product.name.ilike(f"%{name.strip()}%")
+        )
+
+    if brand:
+        statement = statement.where(
+            Product.brand.ilike(f"%{brand.strip()}%")
+        )
+
+    if category:
+        statement = statement.where(
+            Product.category.ilike(f"%{category.strip()}%")
+        )
+
+    statement = statement.order_by(Product.id)
+
     return list(db.scalars(statement).all())
+
 
 #get product by id
 def get_product_by_id(
